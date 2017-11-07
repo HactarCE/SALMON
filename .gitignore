@@ -137,3 +137,17 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# =========================
+# Other Stuff
+# =========================
+
+# Dropbox
+.dropbox
+
+# Previous versions
+Old Java
+Old Python
+
+# ZIPs
+*.zip
