@@ -7,17 +7,25 @@ import sys
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+MAIN_MENU = MenuScene("SALMON", ["NEW GAME", "CONTINUE",
+                                 "ACHIEVEMENTS", "SETTINGS", "QUIT"], disabled=[1])
+
+SETTINGS_MENU = MenuScene("SETTINGS", ["BACK", "KEYBINDS", "FONT"])
+
 
 def main():
     global term
     term = Terminal(title="SALMON")
-    show_main_menu()
+    while True:
+        show_main_menu()
 
 
 def show_main_menu():
-    callbacks = [new_game, continue_game, show_achievements, show_settings, sys.exit]
-    choices = ["NEW GAME", "CONTINUE", "ACHIEVEMENTS", "SETTINGS", "QUIT"]
-    MenuScene("SALMON", choices, lambda choice: callbacks[choice](), [1]).show(term)
+    [new_game,
+     continue_game,
+     show_achievements,
+     show_settings,
+     term.quit][MAIN_MENU.show(term)]()
 
 
 def new_game():
@@ -28,7 +36,6 @@ def new_game():
 
     Text centering was all me though.
     '''), "TITLE").show(term)
-    show_main_menu()
 
 
 def continue_game():
@@ -36,7 +43,6 @@ def continue_game():
     You can't continue. I haven't implemented that yet!
     (Also you shouldn't be able to select this.)
     ''')).show(term)
-    show_main_menu()
 
 
 def show_achievements():
@@ -44,21 +50,22 @@ def show_achievements():
     You can't view achievements.
     I haven't implemented that yet!
     ''')).show(term)
-    show_main_menu()
 
 
 def show_settings():
-    current = term.get_font_size()
-    new = current + 2 if current < 24 else 8
-    ExpositionScene(dedent('''\
-    You can't change settings. I haven't implemented that yet!
+    [lambda: None,
+     show_keybinds,
+     show_font_selection
+     ][SETTINGS_MENU.show(term)]()
 
-    So for now this button just cycles through font sizes.
-    Current font size: {}
-    New font size: {}
-    ''').format(current, new)).show(term)
-    term.set_font_size(new)
-    show_main_menu()
+
+def show_font_selection():
+    FontSizeSelectionScene().show(term)
+
+
+def show_keybinds():
+    pass
+
 
 if __name__ == '__main__':
     main()

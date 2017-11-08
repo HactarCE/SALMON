@@ -3,14 +3,16 @@ from .terminal import Terminal, EventType
 
 class MenuScene(object):
 
-    str_deselected = "  {}  "
-    str_selected = "> {} <"
+    str_deselected = "{:^16}"
+    # str_selected = " - {} - "
+    str_selected = "{:^16}"
     fmt_title = {'fg': 'yellow'}
-    fmt_deselected = {'fg': '#aaa'}
-    fmt_selected = {'fg': '#fff'}
+    fmt_deselected = {'fg': '#aaa', 'bg': '#000'}
+    # fmt_selected = {'fg': '#fff'}
+    fmt_selected = {'fg': '#fff', 'bg': '#333'}
     fmt_disabled = {'fg': '#555'}
 
-    def __init__(self, title, choices, callback, disabled_choices=()):
+    def __init__(self, title, choices, fmt={}, disabled=()):
         """Initialize the menu
 
         title - string contianing title text
@@ -20,8 +22,16 @@ class MenuScene(object):
         """
         self.title = title
         self.choices = choices
-        self.callback = callback
-        self.disabled_choices = disabled_choices
+        self.fmt = fmt
+        if 'title' in fmt:
+            self.fmt_title = fmt['title']
+        if 'deselected' in fmt:
+            self.fmt_deselected = fmt['deselected']
+        if 'selected' in fmt:
+            self.fmt_selected = fmt['selected']
+        if 'disabled' in fmt:
+            self.fmt_disabled = fmt['disabled']
+        self.disabled = disabled
 
     def draw_full(self):
         self.t.clear()
@@ -43,7 +53,7 @@ class MenuScene(object):
 
     def draw_choice(self, n, selected):
         text = (self.str_deselected, self.str_selected)[selected].format(self.choices[n])
-        if n in self.disabled_choices:
+        if n in self.disabled:
             fmt = self.fmt_disabled
         else:
             fmt = (self.fmt_deselected, self.fmt_selected)[selected]
@@ -53,24 +63,18 @@ class MenuScene(object):
         self.t = terminal
         self.selection = 0
         self.draw_full()
-        data, = self.t.loop(self.handle_event)
-        if data == 'select':
-            self.callback(self.selection)
-        elif data == 'exit':
-            self.t.quit()
+        return self.t.loop(self.handle_event)
 
     def handle_event(self, e):
         if e.type == EventType.KeyPress:
             if e.keysym in ('Up', 'w', 'Down', 's'):
                 diff = -1 if e.keysym in ('Up', 'w') else 1
                 new_sel = self.selection + diff
-                while new_sel in self.disabled_choices:
+                while new_sel in self.disabled:
                     new_sel += diff
                 if 0 <= new_sel < len(self.choices):
                     self.update_selection(new_sel)
             elif e.keysym in ('space', 'Return'):
-                self.t.exit_loop('select')
-            elif e.keysym in ('Escape'):
-                self.t.exit_loop('exit')
-            # else:
-            #     print(e)
+                self.t.exit_loop(self.selection)
+            elif e.keysym in ('Escape',):
+                self.t.exit_loop(-1)

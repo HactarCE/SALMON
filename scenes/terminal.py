@@ -1,6 +1,7 @@
 from time import time
 from tkinter import *
 from tkinter.font import nametofont
+from traceback import print_exc
 import numpy as np
 
 
@@ -102,8 +103,8 @@ class Terminal(object):
 
         Call redraw() yourself.
 
-        Call exit_loop() to exit the loop. Any arguments passed to exit_loop()
-        will be returned by main_loop() as a tuple, which can be used to retrieve
+        Call exit_loop() to exit the loop. Any argument passed to exit_loop()
+        will be returned by main_loop(), which can be used to retrieve
         information about what to do after the loop exits.
 
         DO NOT START A LOOP FROM WITHIN EVENT_HANDLER UNLESS YOU REALLY LIKE RECURSION.
@@ -119,11 +120,11 @@ class Terminal(object):
                 self.do_frame()
             self.process_events()
         self.event_handler = lambda e: None
-        return self.exit_args
+        return self.return_value
 
-    def exit_loop(self, *args):
+    def exit_loop(self, return_value=None):
         self.continue_loop = False
-        self.exit_args = args
+        self.return_value = return_value
 
     def clear(self, char=' ', fg='white', bg='black'):
         """Clear the buffer"""
@@ -138,6 +139,7 @@ class Terminal(object):
         try:
             self.root.update()
         except TclError:
+            print_exc()
             sys.exit()
 
     def redraw(self):
@@ -146,6 +148,7 @@ class Terminal(object):
             self.refresh()  # load buffer into text widget
             self.root.update_idletasks()
         except TclError:
+            print_exc()
             sys.exit()
 
     def refresh_cell(self, pos):
@@ -185,8 +188,8 @@ class Terminal(object):
                 self.fg_buffer[y][x:end_x] = fg
             if bg:
                 self.bg_buffer[y][x:end_x] = bg
-            for i in range(x, end_x):
-                self.refresh_cell((y, i))
+            # for i in range(x, end_x):
+                # self.refresh_cell((y, i))
             y += 1
 
     def refresh(self):
