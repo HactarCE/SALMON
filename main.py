@@ -16,7 +16,7 @@ SETTINGS_MENU = MenuScene("SETTINGS", ["BACK", "KEYBINDS", "FONT"])
 def main():
     global term
     term = Terminal(title="SALMON")
-    term.root.iconbitmap(os.path.join(os.path.dirname(os.path.realpath(__file__)), r'icon\icon.ico')) # doesn't work when compiled for some reason
+    # term.root.iconbitmap(os.path.join(os.path.dirname(os.path.realpath(__file__)), r'icon\icon.ico')) # doesn't work when compiled for some reason
     while True:
         show_main_menu()
 

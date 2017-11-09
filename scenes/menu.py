@@ -78,3 +78,19 @@ class MenuScene(object):
                 self.t.exit_loop(self.selection)
             elif e.keysym in ('Escape',):
                 self.t.exit_loop(-1)
+
+
+class Choice(object):
+    def __init__(self, text, **kwargs):
+        self.text = text
+        for k in ('str_deselected', 'str_selected', 'fmt_deselected', 'fmt_selected', 'fmt_disabled'):
+            if k in kwargs:
+                setattr(self, k, kwargs[k])
+
+    def draw(self, menu, pos, state):
+
+        s = (self.str_selected if state == 'selected' else self.str_deselected).format(self.text)
+        f =
+
+
+class SpinnerChoice()
