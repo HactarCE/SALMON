@@ -101,7 +101,9 @@ def show_font_selection():
 
 
 def show_keybinds():
-    pass
+    term.clear()
+    term.print_centered('NYI')
+    term.wait_for_key_press()
 
 
 if __name__ == '__main__':
