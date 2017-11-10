@@ -1,17 +1,68 @@
+from abc import ABC, abstractmethod
 from time import time
 from tkinter import *
-from tkinter.font import nametofont
+from tkinter import font as tkFont
 from traceback import print_exc
 import numpy as np
 
 
-class Terminal(object):
+class AbstractCanvas(ABC):
+    """A object that can have characters written to it; either a Terminal or a TerminalArea"""
+
+    @abstractmethod
+    def clear(self, char=' ', fg='white', bg='black'):
+        """Clear the buffer"""
+        pass
+
+    @abstractmethod
+    def redraw(self):
+        """Update the screen visually"""
+        pass
+
+    @abstractmethod
+    def get_char(self, pos): pass
+
+    @abstractmethod
+    def get_fg(self, pos): pass
+
+    @abstractmethod
+    def get_bg(self, pos): pass
+
+    @abstractmethod
+    def set_char(self, pos, char, fg=None, bg=None): pass
+
+    @abstractmethod
+    def set_fg(self, pos, color): pass
+
+    @abstractmethod
+    def set_bg(self, pos, color): pass
+
+    @abstractmethod
+    def print_at(self, pos, chars, fg=None, bg=None): pass
+
+    @abstractmethod
+    def print_centered(self, pos, text, fg=None, bg=None):
+        """Prints text centered at pos
+
+        pos=None --> horizontally and vertically centered on screwen
+        pos=(y, None) --> horizontally centered on screen at Y
+        pos=(None, x) --> vertically centered on screen at X
+        pos=(y, x) --> centered at (Y, X)
+
+        Multiline text is ok.
+        """
+        pass
+
+
+class Terminal(AbstractCanvas):
     """Displays a Tkinter window resembling a term
 
     All indices are tuples (y, x) or (row, column). Negative coordinates work.
 
-    Use idle() in a loop when nothing else is happening.
-    Use update() to update the screen.
+    Use process_events() in a loop when nothing else is happening.
+    Use redraw() to update the screen. There is no guarantee that the screen will
+    not be redrawn at other time, but this method is necessary to explicitly
+    redraw the screen.
 
     set_char(), set_fg(), and set_bg() can be used to write to the screen.
     get_char(), get_fg(), and get_bg() can be used to read from the screen.
@@ -42,6 +93,11 @@ class Terminal(object):
     def __init__(self, title=None, dim=(24, 80), event_handler=lambda e: None, fg='white', bg='black'):
 
         self.h, self.w = self.dim = dim
+        # dtype='<U1' means strings of length 0 or 1
+        self.char_buffer = np.empty(self.dim, dtype='<U1')
+        # dtype=object means the strings can be of any length
+        self.fg_buffer = np.empty(self.dim, dtype=object)
+        self.bg_buffer = np.empty(self.dim, dtype=object)
         self.clear(' ', fg, bg)
         self.tags = []
 
@@ -52,9 +108,9 @@ class Terminal(object):
 
         self.root.protocol('WM_DELETE_WINDOW', self.quit)
 
-        self.font = nametofont('TkFixedFont')
+        self.font = tkFont.nametofont('TkFixedFont')
         self.text_widget = Text(self.root, font=self.font, padx=-1, pady=-1,
-                                bg=bg, fg=fg)
+                                bg=bg, fg=fg, cursor='arrow')
 
         self.event_handler = event_handler
         real_event_handler = lambda e: self.event_handler(e)
@@ -75,6 +131,22 @@ class Terminal(object):
         self.set_font_size(self.get_font_size())
 
         self.redraw()
+
+    def get_fixed_fonts(self):
+        return [tkFont.Font(family=f) for f in tkFont.families() if
+                f.lower() != 'ithkuil' # fuck Ithkuil
+                and (not f.startswith('@'))
+                and tkFont.Font(family=f).metrics()['fixed']]
+
+    def get_font(self):
+        return self.font
+
+    def set_font(self, font, font_size=None):
+        if font_size is None:
+            font_size = self.get_font_size()
+        self.font = font if isinstance(font, tkFont.Font) else tkFont.Font(family=font)
+        self.text_widget['font'] = self.font
+        self.set_font_size(font_size)
 
     def get_font_size(self):
         return self.font['size']
@@ -126,13 +198,14 @@ class Terminal(object):
         self.continue_loop = False
         self.return_value = return_value
 
+    def draw_rect(self, pos1, pos2, char=' ', fg='white', bg='black'):
+        TerminalArea(self, pos1, pos2).clear(char, fg, bg)
+
     def clear(self, char=' ', fg='white', bg='black'):
         """Clear the buffer"""
-        self.char_buffer = np.full(
-            self.dim, ' ')  # dtype will be <U1 because all strings are the same length
-        # dtype=object means the strings can be of any length
-        self.fg_buffer = np.full(self.dim, fg, dtype=object)
-        self.bg_buffer = np.full(self.dim, bg, dtype=object)
+        self.char_buffer.fill(char)
+        self.fg_buffer.fill(fg)
+        self.bg_buffer.fill(bg)
 
     def process_events(self):
         """Respond to window events and stuff"""
@@ -179,9 +252,9 @@ class Terminal(object):
     def set_bg(self, pos, color):
         self.bg_buffer[pos] = color
 
-    def print_at(self, pos, chars, fg=None, bg=None):
+    def print_at(self, pos, text, fg=None, bg=None):
         y, x = pos
-        for line in chars.splitlines():
+        for line in text.splitlines():
             end_x = x + len(line)
             self.char_buffer[y][x:end_x] = list(line)
             if fg:
@@ -190,6 +263,25 @@ class Terminal(object):
                 self.bg_buffer[y][x:end_x] = bg
             # for i in range(x, end_x):
                 # self.refresh_cell((y, i))
+            y += 1
+
+    def print_centered(self, pos, text, fg=None, bg=None):
+        """Prints text centered at pos
+
+        pos=None --> horizontally and vertically centered on screwen
+        pos=(y, None) --> horizontally centered on screen at Y
+        pos=(None, x) --> vertically centered on screen at X
+        pos=(y, x) --> centered at (Y, X)
+
+        Multiline text is ok.
+        """
+        lines = text.splitlines()
+        y, x = pos if pos else (None, None)
+        y = int((self.h / 2 - 0.5 if y is None else y) - len(lines) / 2 + 0.5)
+        mid_x = self.w / 2 if x is None else x
+        for line in lines:
+            x = int(mid_x - len(line) / 2)
+            self.print_at((y, x), line, fg=fg, bg=bg)
             y += 1
 
     def refresh(self):
@@ -227,30 +319,8 @@ class Terminal(object):
             _, fg, bg = tag.split('_')
             self.text_widget.tag_config(tag, foreground=fg, background=bg)
 
-    def add_pos(self, pos1, pos2):
-        return (pos1[0] + pos2[0], pos1[1] + pos2[1])
-
     def quit(self):
         self.root.destroy()
-
-    def print_centered(self, pos, text, fg=None, bg=None):
-        """Prints text centered at pos
-
-        pos=None --> horizontally and vertically centered on screwen
-        pos=(y, None) --> horizontally centered on screen at Y
-        pos=(None, x) --> vertically centered on screen at X
-        pos=(y, x) --> centered at (Y, X)
-
-        Multiline text is ok.
-        """
-        lines = text.splitlines()
-        y, x = pos if pos else (None, None)
-        y = int((self.h / 2 - 0.5 if y is None else y) - len(lines) / 2 + 0.5)
-        mid_x = self.w / 2 if x is None else x
-        for line in lines:
-            x = int(mid_x - len(line) / 2)
-            self.print_at((y, x), line, fg=fg, bg=bg)
-            y += 1
 
     def simple_event_handler(self, exit_condition):
         """Returns an event handler function which exists if exit_condition() returns True
@@ -262,6 +332,88 @@ class Terminal(object):
     def wait_for_key_press(self):
         self.loop(self.simple_event_handler(lambda e: e.type == EventType.KeyPress))
 
+
+class TerminalArea(AbstractCanvas):
+
+    def __init__(self, terminal, corner_1, corner_2):
+        """Reference to a rectangle within a terminal
+
+        terminal - Must be an actual terminal object -- not a TerminalArea
+        """
+        self.t = terminal
+        self.y1 = min(corner_1[0], corner_2[0])
+        self.y2 = max(corner_1[0], corner_2[0])
+        self.x1 = min(corner_1[1], corner_2[1])
+        self.x2 = max(corner_1[1], corner_2[1])
+        self.top_left = (self.y1, self.x1)
+        self.bottom_right = (self.y2, self.x2)
+        self.h = self.y2 - self.y1 + 1
+        self.w = self.x2 - self.x1 + 1
+        self.dim = (self.h, self.w)
+
+    def get_global_pos(self, local_pos):
+        return (local_pos[0] + self.y1, local_pos[1] + self.x1)
+
+    def clear(self, char=' ', fg='white', bg='black'):
+        """Clear the buffer"""
+        self.t.char_buffer[self.y1:(self.y2 + 1), self.x1:(self.x2 + 1)] = char
+        self.t.fg_buffer[self.y1:(self.y2 + 1), self.x1:(self.x2 + 1)] = fg
+        self.t.bg_buffer[self.y1:(self.y2 + 1), self.x1:(self.x2 + 1)] = bg
+        pass
+
+    def redraw(self):
+        """Update the screen visually"""
+        self.t.redraw()
+        pass
+
+    def get_char(self, pos):
+        return self.t.get_char(self.get_global_pos(pos))
+
+    def get_fg(self, pos):
+        return self.t.get_fg(self.get_global_pos(pos))
+
+    def get_bg(self, pos):
+        return self.t.get_bg(self.get_global_pos(pos))
+
+    def set_char(self, pos, *args, **kwargs):
+        return self.t.set_char(self.get_global_pos(pos), *args, **kwargs)
+
+    def set_fg(self, pos, *args, **kwargs):
+        return self.t.set_fg(self.get_global_pos(pos), *args, **kwargs)
+
+    def set_bg(self, pos, *args, **kwargs):
+        return self.t.set_bg(self.get_global_pos(pos), *args, **kwargs)
+
+    def print_at(self, pos, *args, **kwargs):
+        return self.t.print_at(self.get_global_pos(pos), *args, **kwargs)
+
+    def print_centered(self, pos, *args, **kwargs):
+        """Prints text centered at pos
+
+        pos=None --> horizontally and vertically centered on screwen
+        pos=(y, None) --> horizontally centered on screen at Y
+        pos=(None, x) --> vertically centered on screen at X
+        pos=(y, x) --> centered at (Y, X)
+
+        Multiline text is ok.
+        """
+        y, x = pos if pos else (None, None)
+        if y is None:
+            y = self.h / 2 - 0.5
+        if x is None:
+            x = self.w / 2
+        return self.t.print_centered(self.get_global_pos((y, x)), *args, **kwargs)
+
+    def redraw(self, *args, **kwargs):
+        return self.t.redraw(*args, **kwargs)
+
+    def get_char(self, pos):
+        return self.t.get_char
+
+    def redraw(self, *args, **kwargs):
+        self.t.redraw(*args, **kwargs)
+
+
 if __name__ == '__main__':
     import random
     term = Terminal(title='SALMON')
@@ -271,5 +423,5 @@ if __name__ == '__main__':
             colors = ['#000', '#00f', '#0f0', '#0ff', '#f00', '#f0f', '#ff0', '#fff']
             random.shuffle(colors)
             term.set_char(pos, random.choice('abcdefghijklmnopqrstuvwxyz'),
-                             fg=colors[0], bg=colors[1])
+                          fg=colors[0], bg=colors[1])
         term.redraw()
