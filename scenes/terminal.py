@@ -416,7 +416,7 @@ class TerminalArea(AbstractCanvas):
 
 if __name__ == '__main__':
     import random
-    term = Terminal(title='SALMON')
+    term = Terminal(title='Terminal Demo')
     while True:
         for i in range(10):
             pos = (random.randint(0, term.rows - 1), random.randint(0, term.columns - 1))

@@ -102,7 +102,8 @@ def show_font_selection():
 
 def show_keybinds():
     term.clear()
-    term.print_centered('NYI')
+    term.print_centered(None, "Keybind customization\nhasn't been implemented yet.")
+    term.redraw()
     term.wait_for_key_press()
 
 
