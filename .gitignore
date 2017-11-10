@@ -151,3 +151,7 @@ Old Python
 
 # ZIPs
 *.zip
+
+# SALMON configuration and save files
+salmon.cfg
+saves/
