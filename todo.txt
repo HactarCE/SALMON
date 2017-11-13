@@ -1,0 +1,1 @@
+check for invalid or proportional font in salmon.cfg
