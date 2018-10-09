@@ -1,42 +1,40 @@
-import numpy as np
+from collections import defaultdict
+from gamedata.tiles import TILES, get_generic_tile
 from textwrap import dedent
-
-
-# class Tile(object):
-#     def __init__(self, char):
-#         self.char = (' ' if char == '~' else
-#                      char)
-#
-
-
-TILES = {
-    # 'char': ('color', solid)
-    None: ('#222', False),
-    ' ': ('#000', False),
-    '~': ('#000', False),
-    '#': ('#050', True),
-}
-for c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_\'`.':
-    TILES[c] = ('#444', False)
+import numpy as np
 
 
 class Area(object):
+    """A game area consisting of tiles, entities, and items.
 
-    def __init__(self, name, s, start=(0, 0)):
+    name - The name of the area.
+    s - A string representing the positions of tiles.
+    start - A tuple (y, x) representing
+    """
+
+    def __init__(self, name, s, start=(0, 0), tiles={}, obj={}, items={}):
         self.name = name
         self.s = dedent(s).strip().replace('~', ' ')
         self.start = start
+        self.tiles = {**TILES, **tiles}
+        self.objects = obj
+        self.items = items
+
         self.lines = self.s.splitlines()
         self.h = len(self.lines)
         self.w = len(self.lines[-1])
-        self.tiles = np.full((self.h, self.w), ' ')
+        self.tile_array = np.full((self.h, self.w), self.tiles[None])
         # self.colors = np.full((self.h, self.w), '', dtype=object)
         for y, line in enumerate(self.lines):
             for x, char in enumerate(line):
-                self.tiles[y, x] = char
+                self.tile_array[y, x] = self.get_char_tile(char)
 
-    def get_pos(self, pos):
-        char = self.tiles[pos]
-        if char == '.':
-            char = ' '
-        return (char, '#fff', *TILES.get(self.tiles[pos], ('#444', True)))
+    def get_char_tile(self, char):
+        if char in self.tiles:
+            return self.tiles[char]
+        else:
+            # return self.tiles[None]
+            return get_generic_tile(char)
+
+    def get_tile_at_pos(self, pos):
+        return self.tile_array[pos]

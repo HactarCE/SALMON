@@ -179,11 +179,9 @@ class MainWindow(object):
                 area_y, area_x = y + offset[0], x + offset[1]
                 if (area_y, area_x) == self.char_pos:
                     # self.surf.set_char((y, x), '@', '#0ff', '#000')
-                    self.surf.set_char((y, x), '@', '#0ff', self.area.get_pos((area_y, area_x))[2])
+                    self.surf.set_char((y, x), '@', '#0ff', self.area.get_tile_at_pos((area_y, area_x)).bg)
                 elif 0 <= area_y < self.area.h and 0 <= area_x < self.area.w:
-                    char, fg, bg, solid = self.area.get_pos((area_y, area_x))
-                    self.surf.set_char((y, x), char, fg, bg)
-                    pass
+                    self.surf.set_tile((y, x), self.area.get_tile_at_pos((area_y, area_x)))
                 else:
                     self.surf.set_char((y, x), ' ', None, '#222')
                     pass
@@ -214,6 +212,6 @@ class MainWindow(object):
                 new_y, new_x = self.char_pos[0] + y_delta, self.char_pos[1] + x_delta
                 if (0 <= new_y < self.area.h and
                     0 <= new_x < self.area.w and
-                        not self.area.get_pos((new_y, new_x))[3]):
+                        not self.area.get_tile_at_pos((new_y, new_x)).solid):
                     self.char_pos = (self.char_pos[0] + y_delta, self.char_pos[1] + x_delta)
                     self.draw_full()

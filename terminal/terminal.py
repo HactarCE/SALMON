@@ -71,7 +71,7 @@ class Terminal(object):
 
         self.font = tkFont.nametofont('TkFixedFont')
         self.text_widget = Text(self.root, font=self.font, padx=-1, pady=-1,
-                                bg=bg, fg=fg, cursor='arrow')
+                                bg=bg, fg=fg, cursor='arrow', bd=0)
 
         self.event_handler = event_handler
         real_event_handler = lambda e: self.event_handler(e)
