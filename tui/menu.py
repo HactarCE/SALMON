@@ -1,12 +1,15 @@
 from tkinter import EventType
 
 
+MIN_HIGHLIGHT_WIDTH = 16
+
+
 class Menu(object):
 
-    str_deselected_centered = "  {:^12}  "
-    str_selected_centered = "  {:^12}  "
-    str_deselected = "  {:12}  "
-    str_selected = "  {:12}  "
+    str_deselected_centered = f"  {{:^{MIN_HIGHLIGHT_WIDTH}}}  "
+    str_selected_centered = f"  {{:^{MIN_HIGHLIGHT_WIDTH}}}  "
+    str_deselected = f"  {{:{MIN_HIGHLIGHT_WIDTH}}}  "
+    str_selected = f"  {{:{MIN_HIGHLIGHT_WIDTH}}}  "
 
     def __init__(self, title, choices, disabled_choices=(), scroll=False):
         self.title = title

@@ -1,10 +1,13 @@
 from time import time
-from tkinter import Tk, TclError, Text, EventType
 from tkinter import NORMAL, DISABLED, END
+from tkinter import Tk, TclError, Text, EventType
 from tkinter import font as tkFont
 from traceback import print_exc
 import numpy as np
+import os
+import subprocess
 import sys
+import utils
 
 PRINT_TKINTER_ERRORS = False
 
@@ -105,10 +108,36 @@ class Terminal(object):
 
     def get_fixed_fonts(self):
         if not hasattr(self, 'fixed_fonts'):
-            self.fixed_fonts = [tkFont.Font(family=f) for f in tkFont.families() if
-                                f.lower() != 'ithkuil' and  # fuck Ithkuil
-                                (not f.startswith('@')) and
-                                tkFont.Font(family=f).metrics()['fixed']]
+            self.fixed_fonts = []
+            if os.name == 'nt':
+                for fam in tkFont.families():
+                    try:
+                        with utils.timeout(seconds=1):
+                            if fam.startswith('@'):
+                                # Windows fonts being weird
+                                continue
+                            font = tkFont.Font(family=fam)
+                            if font.metrics()['fixed']:
+                                self.fixed_fonts.append(font)
+                    except TimeoutError:
+                        pass
+            else:
+                # Use fc-list if we can, which is way faster.
+                fc_list_output = subprocess.check_output(['fc-list', ':spacing=100', 'family']).decode('UTF-8')
+                for line in fc_list_output.splitlines():
+                    fam = line.rpartition(',')[2]
+                    if not fam:
+                        continue
+                    if 'Emoji' in fam:
+                        # Tcl/Tk can't handle new colored emoji fonts:
+                        # https://bugzilla.redhat.com/show_bug.cgi?id=1498269
+                        # This obviously isn't a great solution, but it
+                        # filters Noto Color Emoji and most others.
+                        continue
+                    font = tkFont.Font(family=fam)
+                    if font.metrics()['fixed']: # just to double-check
+                        self.fixed_fonts.append(font)
+        self.fixed_fonts.sort(key=lambda f: f['family'])
         return self.fixed_fonts
 
     def get_font(self):
