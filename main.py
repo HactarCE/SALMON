@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from gamedata import areas, items
 from textwrap import dedent
 from traceback import print_exc
