@@ -1,16 +1,29 @@
 from .menu import Menu
 from .text import Text
+from collections import defaultdict
 from game import Area, Item
 from gamedata import areas, items
+from time import time
 from tkinter import EventType
 import saveload
 
+
+FPS = 20
+H_RUN_SPEED = 20
+H_WALK_SPEED = 10
+# V_RUN_SPEED = H_RUN_SPEED / 2
+# V_WALK_SPEED = H_WALK_SPEED / 2
+V_RUN_SPEED = H_RUN_SPEED
+V_WALK_SPEED = H_WALK_SPEED
 
 HELP_TEXT = """\
 WASD - move
 Space - select/confirm
 E - open/close inventory
 Q - hide menu
+
+Hold Shift while walking
+to move more slowly.
 
 Use 1, 2, 3, Z, X, and C
 to select items from the
@@ -22,12 +35,35 @@ hints in SETTINGS."""
 
 class Game(object):
 
-    def __init__(self, gamestate={}, fps=None, do_frame=lambda: None):
+    def __init__(self, gamestate={}):
         self.inventory = gamestate.get('inventory', [])
         self.hotbar = Hotbar(self.hotbar_select)
         self.hotbar.items = gamestate.get('hotbar', self.hotbar.items)
-        self.fps = fps
-        self.do_frame = do_frame
+        self.fps = FPS
+        self.pressed_keys = defaultdict(lambda: False)
+        self.h_movement_cooldown = 0
+        self.v_movement_cooldown = 0
+        self.last_frame = 0
+
+    def do_frame(self):
+        walk = self.keydown('shift_l', 'shift_r')
+        dx, dy = 0, 0
+        if self.h_movement_cooldown > 0:
+            self.h_movement_cooldown -= 1
+        if self.h_movement_cooldown <= 0:
+            dx = (-1 if self.keydown('left', 'a') else
+                  +1 if self.keydown('right', 'd') else 0)
+        if self.v_movement_cooldown > 0:
+            self.v_movement_cooldown -= 1
+        if self.v_movement_cooldown <= 0:
+            dy = (-1 if self.keydown('up', 'w') else
+                  +1 if self.keydown('down', 's') else 0)
+        if dx or dy:
+            self.main_window.handle_move(dx, dy)
+            if dx:
+                self.h_movement_cooldown = FPS / (H_WALK_SPEED if walk else H_RUN_SPEED)
+            if dy:
+                self.v_movement_cooldown = FPS / (V_WALK_SPEED if walk else V_RUN_SPEED)
 
     def show(self, surface):
         self.surf = surface
@@ -65,19 +101,27 @@ class Game(object):
     def handle_event(self, e):
         if e.type == EventType.KeyPress:
             keysym = e.keysym.lower()
-            if keysym in ('escape', 'q'):
-                if self.side_content is None:
-                    self.loop = False
-                    self.surf.t.exit_loop()
-                else:
-                    self.hide_menu()
-            elif keysym in ('tab', 'e',):
-                if self.side_content is None:
-                    self.show_on_side(Text(" Not yet implemented :(", "INVENTORY", None), False)
-                else:
-                    self.hide_menu()
-            elif not self.hotbar.handle_event(e):
-                self.main_window.handle_event(e)
+            if not self.pressed_keys[keysym]:
+                self.pressed_keys[keysym] = True
+                if keysym in ('escape', 'q'):
+                    if self.side_content is None:
+                        self.loop = False
+                        self.surf.t.exit_loop()
+                    else:
+                        self.hide_menu()
+                elif keysym in ('tab', 'e'):
+                    if self.side_content is None:
+                        self.show_on_side(Text(" Not yet implemented :(", "INVENTORY", None), False)
+                    else:
+                        self.hide_menu()
+                elif not self.hotbar.handle_event(e):
+                    self.main_window.handle_event(e)
+        elif e.type == EventType.KeyRelease:
+            keysym = e.keysym.lower()
+            self.pressed_keys[keysym] = False
+
+    def keydown(self, *keysyms):
+        return any(self.pressed_keys[keysym] for keysym in keysyms)
 
     def hotbar_select(self, slot):
         self.surf.t.exit_loop(self.hotbar.items[slot])
@@ -201,17 +245,13 @@ class MainWindow(object):
         self.area = area
         self.char_pos = area.start
 
+    def handle_move(self, dx, dy):
+        new_y, new_x = self.char_pos[0] + dy, self.char_pos[1] + dx
+        if (0 <= new_y < self.area.h and
+            0 <= new_x < self.area.w and
+                not self.area.get_tile_at_pos((new_y, new_x)).solid):
+            self.char_pos = (self.char_pos[0] + dy, self.char_pos[1] + dx)
+            self.draw_full()
+
     def handle_event(self, e):
-        if e.type == EventType.KeyPress:
-            keysym = e.keysym.lower()
-            if keysym in ('up', 'w', 'left', 'a', 'down', 's', 'right', 'd'):
-                x_delta = (-1 if keysym in ('left', 'a') else
-                           +1 if keysym in ('right', 'd') else 0)
-                y_delta = (-1 if keysym in ('up', 'w') else
-                           +1 if keysym in ('down', 's') else 0)
-                new_y, new_x = self.char_pos[0] + y_delta, self.char_pos[1] + x_delta
-                if (0 <= new_y < self.area.h and
-                    0 <= new_x < self.area.w and
-                        not self.area.get_tile_at_pos((new_y, new_x)).solid):
-                    self.char_pos = (self.char_pos[0] + y_delta, self.char_pos[1] + x_delta)
-                    self.draw_full()
+        pass
