@@ -142,6 +142,9 @@ class Surface(object):
                     print_exc()
                 sys.exit()
 
+    def set_tile(self, pos, tile):
+        self.set_char(pos, tile.char, tile.fg, tile.bg)
+
     def print_at(self, pos, text, style='default'):
         """Print text at pos."""
 
