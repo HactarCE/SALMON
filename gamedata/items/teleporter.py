@@ -13,6 +13,5 @@ class Teleporter(Item):
     def use(self, game):
         selection = game.show_on_side(Menu(self.name.upper(), self.area_names))
         if selection != -1:
-            game.main_window.set_area(self.areas[selection])
+            game.set_area(self.areas[selection])
         game.hide_menu()
-        # game.main_window.draw_full()

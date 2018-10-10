@@ -1,5 +1,5 @@
 from time import time
-from tkinter import NORMAL, DISABLED, END
+from tkinter import NORMAL, DISABLED, END, CENTER
 from tkinter import Tk, TclError, Text, EventType
 from tkinter import font as tkFont
 from traceback import print_exc
@@ -91,7 +91,7 @@ class Terminal(object):
         self.text_widget.bind("<Shift-Up>", real_event_handler)
         self.text_widget['state'] = DISABLED
 
-        self.text_widget.pack()
+        self.text_widget.place(relx=0.5, rely=0.5, anchor=CENTER)
         self.set_font_size(self.get_font_size())
 
         self.destroyed = False
@@ -160,6 +160,12 @@ class Terminal(object):
         self.root.geometry('{}x{}'.format(w, h))
         self.root.resizable(width=False, height=False)
         self.root.eval('tk::PlaceWindow %s center' % self.root.winfo_toplevel())
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+        self.root.update_idletasks()
         self.text_widget.focus_set()
 
     def update(self):

@@ -34,6 +34,7 @@ def build_menus():
     global MAIN_MENU, SETTINGS_MENU, FONT_MENU
     MAIN_MENU = Menu("SALMON",
                      ["NEW GAME", "CONTINUE", "ACHIEVEMENTS", "SETTINGS", "QUIT"],
+                     subtitle="a surrealist game about choice",
                      disabled_choices=[1])
     SETTINGS_MENU = Menu("SETTINGS",
                          ["BACK", SpinnerChoice(
@@ -75,7 +76,8 @@ def new_game():
                 areas.start.START,
                 areas.demo.DEMO_1,
                 areas.demo.DEMO_2,
-                areas.demo.DEMO_3
+                areas.demo.DEMO_3,
+                areas.tutorial.TUT_01,
             ]), None, None
         ]
     }).show(surf)

@@ -12,3 +12,7 @@ class Tile(object):
         self.fg = fg
         self.bg = bg
         self.solid = solid
+
+
+def get_generic_tile(char, solid=False):
+    return Tile(char, '#fff', '#444', solid)

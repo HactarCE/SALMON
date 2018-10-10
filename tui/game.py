@@ -8,13 +8,9 @@ from tkinter import EventType
 import saveload
 
 
-FPS = 20
-H_RUN_SPEED = 20
-H_WALK_SPEED = 10
-# V_RUN_SPEED = H_RUN_SPEED / 2
-# V_WALK_SPEED = H_WALK_SPEED / 2
-V_RUN_SPEED = H_RUN_SPEED
-V_WALK_SPEED = H_WALK_SPEED
+FPS = 30
+RUN_SPEED = 15
+WALK_SPEED = 6
 
 HELP_TEXT = """\
 WASD - move
@@ -41,29 +37,22 @@ class Game(object):
         self.hotbar.items = gamestate.get('hotbar', self.hotbar.items)
         self.fps = FPS
         self.pressed_keys = defaultdict(lambda: False)
-        self.h_movement_cooldown = 0
-        self.v_movement_cooldown = 0
+        self.movement_cooldown = 0
         self.last_frame = 0
 
     def do_frame(self):
         walk = self.keydown('shift_l', 'shift_r')
         dx, dy = 0, 0
-        if self.h_movement_cooldown > 0:
-            self.h_movement_cooldown -= 1
-        if self.h_movement_cooldown <= 0:
-            dx = (-1 if self.keydown('left', 'a') else
-                  +1 if self.keydown('right', 'd') else 0)
-        if self.v_movement_cooldown > 0:
-            self.v_movement_cooldown -= 1
-        if self.v_movement_cooldown <= 0:
-            dy = (-1 if self.keydown('up', 'w') else
-                  +1 if self.keydown('down', 's') else 0)
+        if self.movement_cooldown > 0:
+            self.movement_cooldown -= 1
+        if self.movement_cooldown <= 0:
+            dx = ((-1 if self.keydown('left', 'a') else 0) +
+                  (+1 if self.keydown('right', 'd') else 0))
+            dy = ((-1 if self.keydown('up', 'w') else 0) +
+                  (+1 if self.keydown('down', 's') else 0))
         if dx or dy:
-            self.main_window.handle_move(dx, dy)
-            if dx:
-                self.h_movement_cooldown = FPS / (H_WALK_SPEED if walk else H_RUN_SPEED)
-            if dy:
-                self.v_movement_cooldown = FPS / (V_WALK_SPEED if walk else V_RUN_SPEED)
+            self.tile_window.handle_move(dx, dy)
+            self.movement_cooldown = FPS / (WALK_SPEED if walk else RUN_SPEED)
 
     def show(self, surface):
         self.surf = surface
@@ -77,8 +66,8 @@ class Game(object):
 
         self.game_surf = self.surf.surface((0, 0), (self.v_border, self.h_border))
         self.game_surf_big = self.surf.surface((0, 0), (self.v_border, -1))
-        self.main_window = MainWindow()
-        self.main_window.show(self.game_surf, areas.start.START)
+        self.tile_window = TileWindow()
+        self.tile_window.show(self.game_surf, areas.start.START)
 
         self.side_surf = self.surf.surface((0, self.h_border + 1),
                                            (self.v_border, self.surf.w - 1))
@@ -115,7 +104,7 @@ class Game(object):
                     else:
                         self.hide_menu()
                 elif not self.hotbar.handle_event(e):
-                    self.main_window.handle_event(e)
+                    self.tile_window.handle_event(e)
         elif e.type == EventType.KeyRelease:
             keysym = e.keysym.lower()
             self.pressed_keys[keysym] = False
@@ -130,15 +119,18 @@ class Game(object):
         if isinstance(thing, Menu):
             thing.str_deselected = " {{:{}}} ".format(self.side_surf.w - 4)
             thing.str_selected = " {{:{}}} ".format(self.side_surf.w - 4)
-        self.main_window.set_surface(self.game_surf)
-        self.main_window.draw_full()
+        self.tile_window.set_surface(self.game_surf)
+        self.tile_window.draw_full()
         self.side_content = thing
         return thing.show(self.side_surf, *args, **kwargs)
 
     def hide_menu(self):
-        self.main_window.set_surface(self.game_surf_big)
-        self.main_window.draw_full()
+        self.tile_window.set_surface(self.game_surf_big)
+        self.tile_window.draw_full()
         self.side_content = None
+
+    def set_area(self, area):
+        self.tile_window.set_area(area)
 
 
 class Hotbar(object):
@@ -198,7 +190,7 @@ class Hotbar(object):
             return True
 
 
-class MainWindow(object):
+class TileWindow(object):
 
     def __init__(self):
         pass
@@ -248,8 +240,13 @@ class MainWindow(object):
     def handle_move(self, dx, dy):
         if dx and dy:
             # slide against walls (prioritizing X axis I guess)
-            self.handle_move(dx, 0)
-            self.handle_move(0, dy)
+            dx_success = self.handle_move(dx, 0)
+            dy_success = self.handle_move(0, dy)
+            if dy_success and not dx_success:
+                self.handle_move(dx, 0)
+                return True
+            else:
+                return dx_success
         else:
             old_y, old_x = self.char_pos
             new_y, new_x = old_y + dy, old_x + dx
@@ -258,6 +255,8 @@ class MainWindow(object):
                     not self.area.get_tile_at_pos((new_y, new_x)).solid):
                 self.char_pos = (self.char_pos[0] + dy, self.char_pos[1] + dx)
                 self.draw_full()
+                return True
+            return False
 
     def handle_event(self, e):
         pass

@@ -2,3 +2,5 @@ check for invalid or proportional font in salmon.cfg
 main_area is not set properly when help screen is disabled
 different font listing in Linux
 add timeout when checking each font for fixed-width
+
+manage key state via terminal class to avoid any issues (e.g. hold D & press Z)

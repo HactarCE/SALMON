@@ -11,9 +11,10 @@ class Menu(object):
     str_deselected = f"  {{:{MIN_HIGHLIGHT_WIDTH}}}  "
     str_selected = f"  {{:{MIN_HIGHLIGHT_WIDTH}}}  "
 
-    def __init__(self, title, choices, disabled_choices=(), scroll=False):
+    def __init__(self, title, choices, subtitle=None, disabled_choices=(), scroll=False):
         self.title = title
         self.choices = tuple(obj if isinstance(obj, Choice) else Choice(obj) for obj in choices)
+        self.subtitle = subtitle
         self.disabled_choices = disabled_choices
         self.scroll = scroll
 
@@ -44,11 +45,13 @@ class Menu(object):
         if self.scroll:
             self.choices_y = self.surf.y_center - self.selection
         elif self.surf.get_style('content')['center_v']:
-            self.choices_y = (self.surf.t.h - len(self.choices)) // 2 + bool(self.title)
+            self.choices_y = (self.surf.t.h - len(self.choices)) // 2 + bool(self.title) + bool(self.subtitle)
         else:
             self.choices_y = 3
         if self.title and self.choices_y > 2:
-            self.surf.print_at((self.choices_y - 2, 1), self.title, style='title')
+            self.surf.print_at((self.choices_y - 2 - (2 * bool(self.subtitle)), 1), self.title, style='title')
+        if self.subtitle and self.choices_y > 4:
+            self.surf.print_at((self.choices_y - 2, 1), self.subtitle, style='caption')
         for i in range(len(self.choices)):
             if 0 <= self.choices_y + i < self.surf.h:
                 self.draw_choice(i, False)

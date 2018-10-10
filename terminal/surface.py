@@ -52,7 +52,7 @@ class Surface(object):
         },
         'caption': {
             # '_base': 'content',
-            'fg': '#aaa'
+            'fg': '#666'
         },
         'deselected': {
             # '_base': 'content',
