@@ -246,12 +246,18 @@ class MainWindow(object):
         self.char_pos = area.start
 
     def handle_move(self, dx, dy):
-        new_y, new_x = self.char_pos[0] + dy, self.char_pos[1] + dx
-        if (0 <= new_y < self.area.h and
-            0 <= new_x < self.area.w and
-                not self.area.get_tile_at_pos((new_y, new_x)).solid):
-            self.char_pos = (self.char_pos[0] + dy, self.char_pos[1] + dx)
-            self.draw_full()
+        if dx and dy:
+            # slide against walls (prioritizing X axis I guess)
+            self.handle_move(dx, 0)
+            self.handle_move(0, dy)
+        else:
+            old_y, old_x = self.char_pos
+            new_y, new_x = old_y + dy, old_x + dx
+            if (0 <= new_y < self.area.h and
+                0 <= new_x < self.area.w and
+                    not self.area.get_tile_at_pos((new_y, new_x)).solid):
+                self.char_pos = (self.char_pos[0] + dy, self.char_pos[1] + dx)
+                self.draw_full()
 
     def handle_event(self, e):
         pass
